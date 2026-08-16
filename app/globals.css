@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-dark: #18181b;
+  --brand-primary: #dc2626;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-zinc-50 text-zinc-900;
+}
+
+::selection {
+  background-color: theme('colors.red.100');
+}
+
+/* subtle focus ring, consistent everywhere */
+.focus-ring {
+  @apply outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white;
+}
+
+/* page-level entrance animation, applied to each route's top-level wrapper */
+.page-enter {
+  animation: page-enter 280ms ease-out;
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.sched-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.sched-table th, .sched-table td {
+  border-right: 1px solid theme('colors.zinc.200');
+  border-bottom: 1px solid theme('colors.zinc.200');
+}
+.sched-sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: white;
+}
+.sched-sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: theme('colors.zinc.900');
+  color: white;
+}
+.sched-sticky-corner {
+  position: sticky;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  background: theme('colors.zinc.900');
+  color: white;
+}
