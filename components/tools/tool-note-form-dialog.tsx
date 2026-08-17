@@ -144,7 +144,7 @@ export function ToolNoteFormDialog({
               id="tn-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="cth. Akun Portal Klien X / SOP Restart Service"
+              placeholder="cth. Akun Portal / SOP"
             />
           </div>
           <div>
