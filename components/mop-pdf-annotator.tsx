@@ -38,7 +38,7 @@ const MAX_PAGE_WIDTH = 1200;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.25;
-const CONTROLS_HIDE_DELAY = 1800; // ms tanpa gerakan sebelum tombol zoom disembunyikan
+const CONTROLS_HIDE_DELAY = 1800; // ms tanpa aktivitas sebelum tombol zoom disembunyikan
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -55,6 +55,11 @@ interface PageSlot {
   rendering: boolean;
 }
 
+// Titik anchor (dalam koordinat layar/client) tempat zoom harus "napak" —
+// dari klik tombol +/- dipakai tengah viewport, dari pinch dipakai titik
+// tengah dua jari.
+type Anchor = { x: number; y: number };
+
 export function MopPdfAnnotator({
   mopId,
   fileUrl,
@@ -66,6 +71,9 @@ export function MopPdfAnnotator({
   initialData: string;
   readOnly?: boolean;
 }) {
+  // outerRef: kotak DIAM yang jadi acuan posisi tombol zoom — tidak pernah
+  // ikut ter-scroll, ter-pan, atau ter-zoom apa pun yang terjadi di dalamnya.
+  const outerRef = React.useRef<HTMLDivElement>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const contentWrapperRef = React.useRef<HTMLDivElement>(null);
   const pagesContainerRef = React.useRef<HTMLDivElement>(null);
@@ -81,76 +89,12 @@ export function MopPdfAnnotator({
 
   // --- Zoom ---
   const [zoom, setZoom] = React.useState(1);
-  const zoomRef = React.useRef(1); 
-  const renderedZoomRef = React.useRef(1); 
-  const zoomGenRef = React.useRef(0); 
-  const pinchStateRef = React.useRef<{ startDist: number; liveZoom: number } | null>(null);
-
-  const commitZoom = React.useCallback(async (target: number) => {
-    const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, target));
-    const myGen = ++zoomGenRef.current;
-    zoomRef.current = clamped;
-    setZoom(clamped);
-
-    if (contentWrapperRef.current) {
-      contentWrapperRef.current.style.transformOrigin = "top center";
-      contentWrapperRef.current.style.transform = `scale(${clamped / renderedZoomRef.current})`;
-    }
-
-    await renderPdfRef.current?.();
-
-    if (zoomGenRef.current !== myGen) return; 
-    renderedZoomRef.current = clamped;
-    if (contentWrapperRef.current) contentWrapperRef.current.style.transform = "";
-  }, []);
-
-  const zoomIn = () => commitZoom(zoomRef.current + ZOOM_STEP);
-  const zoomOut = () => commitZoom(zoomRef.current - ZOOM_STEP);
-  const zoomReset = () => commitZoom(1);
-
-  // --- Kontrol zoom otomatis muncul/hilang ---
-  const [controlsVisible, setControlsVisible] = React.useState(false);
-  const hideTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const showControls = React.useCallback(() => {
-    setControlsVisible(true);
-    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-    hideTimeoutRef.current = setTimeout(() => setControlsVisible(false), CONTROLS_HIDE_DELAY);
-  }, []);
-
-  const keepControlsVisible = React.useCallback(() => {
-    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-    setControlsVisible(true);
-  }, []);
-
-  React.useEffect(() => {
-    return () => {
-      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-    };
-  }, []);
-
-  const [strokes, setStrokes] = React.useState<Stroke[]>(() => {
-    try {
-      const parsed = JSON.parse(initialData || "[]");
-      return Array.isArray(parsed)
-        ? parsed.filter((s): s is Stroke => !!s && typeof s === "object")
-        : [];
-    } catch {
-      return [];
-    }
-  });
-  const [tool, setTool] = React.useState<Tool>("select");
-  const [color, setColor] = React.useState(COLORS[0]);
-  const [saving, setSaving] = React.useState(false);
-  const [dirty, setDirty] = React.useState(false);
-
-  const drawingRef = React.useRef<{ start: Point; current: Stroke | null }>({
-    start: { x: 0, y: 0 },
-    current: null,
-  });
-  const [liveStroke, setLiveStroke] = React.useState<Stroke | null>(null);
-  const [textInput, setTextInput] = React.useState<{ x: number; y: number } | null>(null);
-  const [textValue, setTextValue] = React.useState("");
+  const zoomRef = React.useRef(1);
+  const renderedZoomRef = React.useRef(1);
+  const zoomGenRef = React.useRef(0);
+  const pinchStateRef = React.useRef<{ startDist: number; liveZoom: number; mid: Anchor } | null>(
+    null
+  );
 
   const renderSinglePage = React.useCallback(async (slot: PageSlot) => {
     if (slot.rendered || slot.rendering) return;
@@ -175,6 +119,185 @@ export function MopPdfAnnotator({
       slot.rendering = false;
     }
   }, []);
+
+  /** Ubah ukuran + render ulang halaman DI TEMPAT (tanpa hancurkan DOM),
+   * supaya tidak ada momen "kosong/putih" seperti pendekatan lama yang
+   * mengosongkan innerHTML lalu membangun ulang semua halaman dari nol.
+   * Halaman yang belum pernah terlihat cukup di-resize wadahnya saja —
+   * biar tetap malas-render, nanti otomatis dirender IntersectionObserver
+   * saat digulir ke sana. */
+  const rescalePages = React.useCallback(
+    async (scale: number) => {
+      const pdf = pdfDocRef.current;
+      const wrapperEl = contentWrapperRef.current;
+      if (!pdf || !wrapperEl || slotsRef.current.length === 0) return;
+
+      scaleRef.current = scale;
+      let top = 0;
+      let maxWidth = 0;
+
+      for (const slot of slotsRef.current) {
+        const page = await pdf.getPage(slot.pageNumber);
+        const viewport = page.getViewport({ scale });
+        slot.width = viewport.width;
+        slot.height = viewport.height;
+        slot.top = top;
+        slot.wrapper.style.width = `${viewport.width}px`;
+        slot.wrapper.style.height = `${viewport.height}px`;
+
+        if (slot.rendered) {
+          // Sudah pernah dilihat sebelumnya -> render ulang sekarang juga
+          // di resolusi baru supaya tetap tajam.
+          slot.rendered = false;
+          await renderSinglePage(slot);
+        }
+        // Yang belum pernah dilihat: biarkan tetap placeholder abu-abu,
+        // ukurannya sudah benar, akan dirender IntersectionObserver nanti.
+
+        top += viewport.height + PAGE_GAP;
+        maxWidth = Math.max(maxWidth, viewport.width);
+      }
+
+      const newHeight = Math.max(top - PAGE_GAP, 0);
+      wrapperEl.style.width = `${maxWidth}px`;
+      wrapperEl.style.height = `${newHeight}px`;
+      setContentSize({ width: maxWidth, height: newHeight });
+    },
+    [renderSinglePage]
+  );
+
+  /** Zoom ke level tertentu, "napak" di titik anchor (default: tengah
+   * viewport) — dipakai tombol +/- maupun hasil akhir pinch. Memberi
+   * feedback visual instan lewat CSS transform (tanpa flash) sambil render
+   * ulang yang sesungguhnya berjalan di belakang, lalu mengoreksi posisi
+   * scroll persis supaya titik anchor tidak "lompat". */
+  const zoomTo = React.useCallback(
+    async (target: number, anchor?: Anchor) => {
+      const scrollEl = scrollRef.current;
+      const wrapperEl = contentWrapperRef.current;
+      const pdf = pdfDocRef.current;
+      if (!scrollEl || !wrapperEl || !pdf) return;
+
+      const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, target));
+      const myGen = ++zoomGenRef.current;
+
+      const rect = scrollEl.getBoundingClientRect();
+      const ax = anchor?.x ?? rect.left + rect.width / 2;
+      const ay = anchor?.y ?? rect.top + rect.height / 2;
+
+      const oldWidth = wrapperEl.offsetWidth || 1;
+      const oldHeight = wrapperEl.offsetHeight || 1;
+      const contentX = scrollEl.scrollLeft + (ax - rect.left);
+      const contentY = scrollEl.scrollTop + (ay - rect.top);
+      const xRatio = contentX / oldWidth;
+      const yRatio = contentY / oldHeight;
+
+      // Preview instan: scale-kan piksel yang sudah ada via CSS, dari titik
+      // anchor persis, jadi tidak ada jeda kosong sama sekali sebelum versi
+      // tajamnya siap.
+      wrapperEl.style.transformOrigin = `${xRatio * 100}% ${yRatio * 100}%`;
+      wrapperEl.style.transform = `scale(${clamped / renderedZoomRef.current})`;
+
+      zoomRef.current = clamped;
+      setZoom(clamped);
+
+      const containerWidth = scrollEl.clientWidth || 800;
+      const baseWidth = Math.min(containerWidth, MAX_PAGE_WIDTH);
+      const firstPage = await pdf.getPage(1);
+      const unscaled = firstPage.getViewport({ scale: 1 });
+      const targetWidth = baseWidth * clamped;
+      const scale = Math.max(targetWidth / unscaled.width, 0.1);
+
+      await rescalePages(scale);
+
+      if (zoomGenRef.current !== myGen) return; // ada zoom lebih baru menyusul, batalkan yang ini
+
+      wrapperEl.style.transform = "";
+      renderedZoomRef.current = clamped;
+
+      // Koreksi scroll: taruh titik anchor kembali persis di posisi layar
+      // yang sama seperti sebelum di-zoom, jadi tidak "lompat" ke atas.
+      const newWidth = wrapperEl.offsetWidth || 1;
+      const newHeight = wrapperEl.offsetHeight || 1;
+      scrollEl.scrollLeft = xRatio * newWidth - (ax - rect.left);
+      scrollEl.scrollTop = yRatio * newHeight - (ay - rect.top);
+    },
+    [rescalePages]
+  );
+
+  const zoomIn = () => zoomTo(zoomRef.current + ZOOM_STEP);
+  const zoomOut = () => zoomTo(zoomRef.current - ZOOM_STEP);
+  const zoomReset = () => zoomTo(1);
+
+  // --- Kontrol zoom otomatis muncul/hilang ---
+  const [controlsVisible, setControlsVisible] = React.useState(false);
+  const hideTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showControls = React.useCallback(() => {
+    setControlsVisible(true);
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    hideTimeoutRef.current = setTimeout(() => setControlsVisible(false), CONTROLS_HIDE_DELAY);
+  }, []);
+
+  const keepControlsVisible = React.useCallback(() => {
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    setControlsVisible(true);
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    };
+  }, []);
+
+  // Desktop (mouse/pen): kontrol muncul begitu kursor bergerak di dalam area
+  // preview, hilang lagi kalau diam. Mobile (touch): kontrol HANYA muncul
+  // saat disentuh/tap, gerakan geser/pinch tidak terus memicu tampil-ulang.
+  // Pakai native addEventListener (bukan prop React) supaya tetap kena
+  // walau elemen di dalamnya dibuat manual lewat DOM API (canvas halaman
+  // PDF), bukan JSX.
+  React.useEffect(() => {
+    const el = outerRef.current;
+    if (!el) return;
+
+    function handlePointerMove(e: PointerEvent) {
+      if (e.pointerType === "touch") return; // panning/pinch tidak memicu reveal
+      showControls();
+    }
+    function handlePointerDown() {
+      showControls();
+    }
+
+    el.addEventListener("pointermove", handlePointerMove);
+    el.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      el.removeEventListener("pointermove", handlePointerMove);
+      el.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [showControls]);
+
+  const [strokes, setStrokes] = React.useState<Stroke[]>(() => {
+    try {
+      const parsed = JSON.parse(initialData || "[]");
+      return Array.isArray(parsed)
+        ? parsed.filter((s): s is Stroke => !!s && typeof s === "object")
+        : [];
+    } catch {
+      return [];
+    }
+  });
+  const [tool, setTool] = React.useState<Tool>("select");
+  const [color, setColor] = React.useState(COLORS[0]);
+  const [saving, setSaving] = React.useState(false);
+  const [dirty, setDirty] = React.useState(false);
+
+  const drawingRef = React.useRef<{ start: Point; current: Stroke | null }>({
+    start: { x: 0, y: 0 },
+    current: null,
+  });
+  const [liveStroke, setLiveStroke] = React.useState<Stroke | null>(null);
+  const [textInput, setTextInput] = React.useState<{ x: number; y: number } | null>(null);
+  const [textValue, setTextValue] = React.useState("");
 
   const renderPdf = React.useCallback(async () => {
     const scrollEl = scrollRef.current;
@@ -203,6 +326,7 @@ export function MopPdfAnnotator({
       const targetWidth = baseWidth * zoomRef.current;
       const scale = Math.max(targetWidth / unscaled.width, 0.1);
       scaleRef.current = scale;
+      renderedZoomRef.current = zoomRef.current;
 
       pagesEl.innerHTML = "";
       let top = 0;
@@ -279,22 +403,13 @@ export function MopPdfAnnotator({
     }
   }, [fileUrl, renderSinglePage]);
 
-  const renderPdfRef = React.useRef(renderPdf);
   React.useEffect(() => {
-    renderPdfRef.current = renderPdf;
-  }, [renderPdf]);
-
-  React.useEffect(() => {
-    renderPdf().then(() => {
-      renderedZoomRef.current = zoomRef.current;
-    });
+    renderPdf();
     let timeout: ReturnType<typeof setTimeout>;
     const ro = new ResizeObserver(() => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
-        renderPdf().then(() => {
-          renderedZoomRef.current = zoomRef.current;
-        });
+        renderPdf();
       }, 300);
     });
     if (scrollRef.current) ro.observe(scrollRef.current);
@@ -303,7 +418,7 @@ export function MopPdfAnnotator({
       ro.disconnect();
       observerRef.current?.disconnect();
     };
-    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [renderPdf]);
 
   React.useEffect(() => {
@@ -313,7 +428,7 @@ export function MopPdfAnnotator({
     };
   }, []);
 
-  // --- Pinch-to-zoom (dua jari) ---
+  // --- Pinch-to-zoom (dua jari), "napak" di titik tengah dua jari ---
   React.useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -323,26 +438,45 @@ export function MopPdfAnnotator({
       const b = touches[1];
       return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
     }
+    function midpoint(touches: TouchList): Anchor {
+      const a = touches[0];
+      const b = touches[1];
+      return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+    }
 
     function onTouchStart(e: TouchEvent) {
       if (e.touches.length === 2 && tool === "select") {
-        pinchStateRef.current = { startDist: dist(e.touches), liveZoom: zoomRef.current };
+        pinchStateRef.current = {
+          startDist: dist(e.touches),
+          liveZoom: zoomRef.current,
+          mid: midpoint(e.touches),
+        };
         showControls();
       }
     }
 
     function onTouchMove(e: TouchEvent) {
       const pinch = pinchStateRef.current;
-      if (e.touches.length === 2 && pinch) {
+      const scrollEl = scrollRef.current;
+      const wrapperEl = contentWrapperRef.current;
+      if (e.touches.length === 2 && pinch && scrollEl && wrapperEl) {
         e.preventDefault();
+        const mid = midpoint(e.touches);
+        pinch.mid = mid; // titik anchor ikut update selama jari bergerak
         const ratio = dist(e.touches) / pinch.startDist;
         const live = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, renderedZoomRef.current * ratio));
         pinch.liveZoom = live;
         setZoom(live);
-        if (contentWrapperRef.current) {
-          contentWrapperRef.current.style.transformOrigin = "top center";
-          contentWrapperRef.current.style.transform = `scale(${live / renderedZoomRef.current})`;
-        }
+
+        // Preview live pinch juga di-anchor ke titik tengah dua jari, bukan
+        // "top center", supaya area yang di-pinch itulah yang membesar.
+        const rect = scrollEl.getBoundingClientRect();
+        const contentX = scrollEl.scrollLeft + (mid.x - rect.left);
+        const contentY = scrollEl.scrollTop + (mid.y - rect.top);
+        const xPct = (contentX / (wrapperEl.offsetWidth || 1)) * 100;
+        const yPct = (contentY / (wrapperEl.offsetHeight || 1)) * 100;
+        wrapperEl.style.transformOrigin = `${xPct}% ${yPct}%`;
+        wrapperEl.style.transform = `scale(${live / renderedZoomRef.current})`;
       }
     }
 
@@ -350,8 +484,7 @@ export function MopPdfAnnotator({
       const pinch = pinchStateRef.current;
       if (pinch) {
         pinchStateRef.current = null;
-
-        commitZoom(pinch.liveZoom);
+        zoomTo(pinch.liveZoom, pinch.mid);
       }
     }
 
@@ -365,7 +498,7 @@ export function MopPdfAnnotator({
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [tool, commitZoom, showControls]);
+  }, [tool, zoomTo, showControls]);
 
   const redrawAnnotations = React.useCallback(() => {
     const canvas = annotationCanvasRef.current;
@@ -534,12 +667,58 @@ export function MopPdfAnnotator({
         </div>
       )}
 
-      <div
-        ref={scrollRef}
-        className="relative min-w-0 flex-1 overflow-auto rounded-md bg-zinc-800"
-        onPointerMove={showControls}
-        onPointerDown={showControls}
-      >
+      {/* outerRef: kotak DIAM — acuan posisi tombol zoom & overlay loading.
+          scrollRef (yang boleh di-scroll/di-zoom) ada DI DALAM ini sebagai
+          layer terpisah, jadi tombol zoom tidak pernah ikut bergerak. */}
+      <div ref={outerRef} className="relative min-h-0 flex-1 overflow-hidden rounded-md bg-zinc-800">
+        <div ref={scrollRef} className="absolute inset-0 overflow-auto">
+          <div className="py-3">
+            <div
+              ref={contentWrapperRef}
+              className="relative mx-auto"
+              style={{ width: contentSize.width || undefined, height: contentSize.height || undefined }}
+            >
+              <div ref={pagesContainerRef} />
+
+              <canvas
+                ref={annotationCanvasRef}
+                className={cn(
+                  "absolute inset-0",
+                  !readOnly && tool !== "select" ? "touch-none cursor-crosshair" : "touch-pan-y touch-pan-x"
+                )}
+                style={{ width: contentSize.width, height: contentSize.height }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+              />
+
+              {textInput && (
+                <div
+                  className="absolute z-10"
+                  style={{ left: `${textInput.x * 100}%`, top: `${textInput.y * 100}%` }}
+                >
+                  <input
+                    autoFocus
+                    value={textValue}
+                    onChange={(e) => setTextValue(e.target.value)}
+                    onBlur={commitText}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitText();
+                      if (e.key === "Escape") {
+                        setTextInput(null);
+                        setTextValue("");
+                      }
+                    }}
+                    className="focus-ring rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-sm shadow-sm"
+                    style={{ color }}
+                    placeholder="Ketik..."
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {loading && (
           <div className="absolute inset-0 z-20 flex items-center justify-center gap-2 bg-zinc-800/90 text-sm text-zinc-300">
             <Loader2 className="h-4 w-4 animate-spin" /> Memuat pratinjau PDF...
@@ -551,13 +730,12 @@ export function MopPdfAnnotator({
           </div>
         )}
 
-        {/* Kontrol zoom — tersembunyi default, muncul saat cursor bergerak /
-            layar disentuh di dalam area preview, otomatis hilang lagi kalau
-            tidak ada aktivitas. Tidak ikut hilang saat cursor di atas
-            kontrol ini sendiri. */}
+        {/* Kontrol zoom — posisinya nempel di pojok outerRef (yang diam),
+            BUKAN di dalam area yang di-scroll/di-zoom, jadi tidak pernah
+            ikut bergeser walau kontennya digulir atau di-pinch. */}
         <div
           className={cn(
-            "sticky top-3 z-20 float-right mr-3 flex items-center gap-0.5 rounded-md border border-zinc-700 bg-zinc-900/90 p-1 shadow-lg backdrop-blur-sm transition-opacity duration-300",
+            "absolute right-3 top-3 z-30 flex items-center gap-0.5 rounded-md border border-zinc-700 bg-zinc-900/90 p-1 shadow-lg backdrop-blur-sm transition-opacity duration-300",
             controlsVisible ? "opacity-100" : "pointer-events-none opacity-0"
           )}
           onPointerEnter={keepControlsVisible}
@@ -591,52 +769,6 @@ export function MopPdfAnnotator({
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
-        </div>
-
-        <div className="py-3">
-          <div
-            ref={contentWrapperRef}
-            className="relative mx-auto"
-            style={{ width: contentSize.width || undefined, height: contentSize.height || undefined }}
-          >
-            <div ref={pagesContainerRef} />
-
-            <canvas
-              ref={annotationCanvasRef}
-              className={cn(
-                "absolute inset-0",
-                !readOnly && tool !== "select" ? "touch-none cursor-crosshair" : "touch-pan-y touch-pan-x"
-              )}
-              style={{ width: contentSize.width, height: contentSize.height }}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-            />
-
-            {textInput && (
-              <div
-                className="absolute z-10"
-                style={{ left: `${textInput.x * 100}%`, top: `${textInput.y * 100}%` }}
-              >
-                <input
-                  autoFocus
-                  value={textValue}
-                  onChange={(e) => setTextValue(e.target.value)}
-                  onBlur={commitText}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitText();
-                    if (e.key === "Escape") {
-                      setTextInput(null);
-                      setTextValue("");
-                    }
-                  }}
-                  className="focus-ring rounded border border-zinc-300 bg-white px-1.5 py-0.5 text-sm shadow-sm"
-                  style={{ color }}
-                  placeholder="Ketik..."
-                />
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>
