@@ -12,7 +12,7 @@ export default async function NotesAccountsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-zinc-900">Notes & Accounts</h1>
-          <p className="text-sm text-zinc-500">SOP, kredensial akun, dan catatan penting lainnya.</p>
+          <p className="text-sm text-zinc-500">Notes penting</p>
         </div>
         <ToolNoteFormDialog mode="create" />
       </div>

@@ -9,7 +9,7 @@ export default async function QuickLinksPage() {
     <div className="page-enter space-y-4">
       <div>
         <h1 className="text-lg font-semibold text-zinc-900">Quick Links</h1>
-        <p className="text-sm text-zinc-500">Tautan cepat ke tools/portal yang sering dipakai.</p>
+        <p className="text-sm text-zinc-500">Link ekosistem yg sering dipake.</p>
       </div>
       <QuickLinksManager links={links} />
     </div>

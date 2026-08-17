@@ -9,7 +9,7 @@ export default async function CliCommandsPage() {
     <div className="page-enter space-y-4">
       <div>
         <h1 className="text-lg font-semibold text-zinc-900">Command CLI</h1>
-        <p className="text-sm text-zinc-500">Kumpulan command beserta fungsinya.</p>
+        <p className="text-sm text-zinc-500">Kumpulan command sama fungsinya.</p>
       </div>
       <CliCommandsManager commands={commands} />
     </div>
