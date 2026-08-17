@@ -438,8 +438,8 @@ export function MopPdfAnnotator({
             <canvas
               ref={annotationCanvasRef}
               className={cn(
-                "absolute inset-0 touch-none",
-                !readOnly && tool !== "select" ? "cursor-crosshair" : ""
+                "absolute inset-0",
+                !readOnly && tool !== "select" ? "touch-none cursor-crosshair" : "touch-pan-y touch-pan-x"
               )}
               style={{ width: contentSize.width, height: contentSize.height }}
               onPointerDown={handlePointerDown}
