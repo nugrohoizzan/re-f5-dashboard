@@ -370,6 +370,57 @@ export const auditLog = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Tools & Platforms — Notes/Accounts (SOP, kredensial, catatan bebas dengan
+// lampiran opsional), CLI Commands, dan Quick Links.
+// ---------------------------------------------------------------------------
+
+export const toolNotes = pgTable(
+  "tool_notes",
+  {
+    id: serial("id").primaryKey(),
+    title: varchar("title", { length: 200 }).notNull(),
+    category: varchar("category", { length: 60 }), // label bebas: "SOP", "Akun", "Catatan", dst
+    content: text("content"),
+    // Kredensial akun (opsional) — password DIENKRIPSI sebelum disimpan,
+    // tidak pernah disimpan/ditampilkan dalam bentuk teks biasa.
+    accountUsername: varchar("account_username", { length: 200 }),
+    accountPasswordEncrypted: text("account_password_encrypted"),
+    accountUrl: varchar("account_url", { length: 500 }),
+    // Lampiran opsional (PDF/DOCX/gambar), disimpan di Vercel Blob
+    fileUrl: text("file_url"),
+    fileName: varchar("file_name", { length: 255 }),
+    fileType: varchar("file_type", { length: 120 }),
+    createdByUserId: text("created_by_user_id"), // lihat CATATAN #1 di bawah
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    titleIdx: index("tool_notes_title_idx").on(t.title),
+  })
+);
+
+export const cliCommands = pgTable("cli_commands", {
+  id: serial("id").primaryKey(),
+  command: text("command").notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 60 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const quickLinks = pgTable("quick_links", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 200 }).notNull(),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type ToolNote = typeof toolNotes.$inferSelect;
+export type CliCommand = typeof cliCommands.$inferSelect;
+export type QuickLink = typeof quickLinks.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
 

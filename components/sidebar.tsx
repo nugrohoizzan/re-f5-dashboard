@@ -19,6 +19,9 @@ import {
   ChevronsRight,
   ChevronDown,
   LogOut,
+  StickyNote,
+  Terminal,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +35,12 @@ const SHIFT_DETAIL_ITEMS = [
   { href: "/activities", label: "Aktivitas", icon: ListChecks },
   { href: "/troubleshooting", label: "Troubleshoot", icon: Wrench },
   { href: "/titipan", label: "Titipan & Pending", icon: ClipboardList },
+];
+
+const TOOLS_ITEMS = [
+  { href: "/tools/notes-accounts", label: "Notes & Accounts", icon: StickyNote },
+  { href: "/tools/cli-commands", label: "Command CLI", icon: Terminal },
+  { href: "/tools/quick-links", label: "Quick Links", icon: Link2 },
 ];
 
 const BOTTOM_ITEMS = [

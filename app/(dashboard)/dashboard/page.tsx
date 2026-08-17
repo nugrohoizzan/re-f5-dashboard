@@ -81,7 +81,7 @@ export default async function DashboardPage({
         <SummaryStat label="Engineer" value={shiftEngineers.length} />
         <SummaryStat label="Aktivitas Selesai" value={activitiesCompleted} />
         <SummaryStat label="Aktivitas Pending" value={activitiesPending} />
-        <SummaryStat label="Troubleshoot" value={troubleshootOpen} />
+        <SummaryStat label="Troubleshoot Isu" value={troubleshootOpen} />
         <SummaryStat label="Titipan Pending" value={openTitipan.length} />
         <Link
           href="/dashboard/handover-report"
