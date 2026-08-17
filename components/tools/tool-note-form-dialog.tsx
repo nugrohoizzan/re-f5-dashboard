@@ -201,7 +201,7 @@ export function ToolNoteFormDialog({
 
           {mode === "create" && (
             <div>
-              <Label>Lampiran file (opsional — PDF/DOCX/gambar)</Label>
+              <Label>Lampiran file (opsional)</Label>
               <div
                 onDragOver={(e) => {
                   e.preventDefault();
