@@ -112,7 +112,7 @@ export function AddTitipanDialog({
           <DialogDescription>
             {engineers.length > 0
               ? `Dibuat oleh ${engineers.map((e) => e.displayName).join(", ")}. Tetap terlihat oleh shift berikutnya sampai selesai.`
-              : "Tidak ada engineer untuk tanggal/shift ini — cek Jadwal Shift."}
+              : "Tidak ada engineer untuk tanggal/shift ini."}
           </DialogDescription>
         </DialogHeader>
 
