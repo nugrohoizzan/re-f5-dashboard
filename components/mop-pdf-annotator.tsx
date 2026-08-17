@@ -38,6 +38,7 @@ const MAX_PAGE_WIDTH = 1200;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.25;
+const CONTROLS_HIDE_DELAY = 1800; // ms tanpa gerakan sebelum tombol zoom disembunyikan
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -79,21 +80,54 @@ export function MopPdfAnnotator({
   const [error, setError] = React.useState<string | null>(null);
 
   // --- Zoom ---
-  const [zoom, setZoom] = React.useState(1); // 1 = pas lebar area preview
-  const zoomRef = React.useRef(1);
-  React.useEffect(() => {
-    zoomRef.current = zoom;
-  }, [zoom]);
-  const pinchStateRef = React.useRef<{ startDist: number; startZoom: number; liveZoom: number } | null>(
-    null
-  );
+  const [zoom, setZoom] = React.useState(1);
+  const zoomRef = React.useRef(1); 
+  const renderedZoomRef = React.useRef(1); 
+  const zoomGenRef = React.useRef(0); 
+  const pinchStateRef = React.useRef<{ startDist: number; liveZoom: number } | null>(null);
 
-  function applyZoom(next: number) {
-    setZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next)));
-  }
-  const zoomIn = () => applyZoom(zoomRef.current + ZOOM_STEP);
-  const zoomOut = () => applyZoom(zoomRef.current - ZOOM_STEP);
-  const zoomReset = () => applyZoom(1);
+  const commitZoom = React.useCallback(async (target: number) => {
+    const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, target));
+    const myGen = ++zoomGenRef.current;
+    zoomRef.current = clamped;
+    setZoom(clamped);
+
+    if (contentWrapperRef.current) {
+      contentWrapperRef.current.style.transformOrigin = "top center";
+      contentWrapperRef.current.style.transform = `scale(${clamped / renderedZoomRef.current})`;
+    }
+
+    await renderPdfRef.current?.();
+
+    if (zoomGenRef.current !== myGen) return; 
+    renderedZoomRef.current = clamped;
+    if (contentWrapperRef.current) contentWrapperRef.current.style.transform = "";
+  }, []);
+
+  const zoomIn = () => commitZoom(zoomRef.current + ZOOM_STEP);
+  const zoomOut = () => commitZoom(zoomRef.current - ZOOM_STEP);
+  const zoomReset = () => commitZoom(1);
+
+  // --- Kontrol zoom otomatis muncul/hilang ---
+  const [controlsVisible, setControlsVisible] = React.useState(false);
+  const hideTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showControls = React.useCallback(() => {
+    setControlsVisible(true);
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    hideTimeoutRef.current = setTimeout(() => setControlsVisible(false), CONTROLS_HIDE_DELAY);
+  }, []);
+
+  const keepControlsVisible = React.useCallback(() => {
+    if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    setControlsVisible(true);
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+    };
+  }, []);
 
   const [strokes, setStrokes] = React.useState<Stroke[]>(() => {
     try {
@@ -147,7 +181,6 @@ export function MopPdfAnnotator({
     const pagesEl = pagesContainerRef.current;
     if (!scrollEl || !pagesEl) return;
 
-    setLoading(true);
     setError(null);
     observerRef.current?.disconnect();
     slotsRef.current = [];
@@ -166,9 +199,6 @@ export function MopPdfAnnotator({
       const containerWidth = scrollEl.clientWidth || 800;
       const firstPage = await pdf.getPage(1);
       const unscaled = firstPage.getViewport({ scale: 1 });
-      // Lebar dasar mengikuti area preview, dikali level zoom saat ini —
-      // jadi saat di-zoom, halaman benar-benar dirender ulang lebih tajam
-      // (bukan cuma di-CSS-scale, hasilnya tetap jernih walau diperbesar).
       const baseWidth = Math.min(containerWidth, MAX_PAGE_WIDTH);
       const targetWidth = baseWidth * zoomRef.current;
       const scale = Math.max(targetWidth / unscaled.width, 0.1);
@@ -236,6 +266,12 @@ export function MopPdfAnnotator({
         observer.observe(slot.wrapper);
       });
       observerRef.current = observer;
+
+      const visibleSlot = slots.find((s) => s.top < scrollEl.scrollTop + scrollEl.clientHeight + 600);
+      if (visibleSlot) {
+        await renderSinglePage(visibleSlot);
+      }
+      await new Promise((resolve) => requestAnimationFrame(resolve));
     } catch (err) {
       console.error(err);
       setError("Gagal memuat pratinjau PDF.");
@@ -243,14 +279,23 @@ export function MopPdfAnnotator({
     }
   }, [fileUrl, renderSinglePage]);
 
-  // Render ulang saat file berganti, area preview di-resize, ATAU level zoom
-  // berubah (commit akhir dari tombol +/- maupun pinch, bukan tiap frame).
+  const renderPdfRef = React.useRef(renderPdf);
   React.useEffect(() => {
-    renderPdf();
+    renderPdfRef.current = renderPdf;
+  }, [renderPdf]);
+
+  React.useEffect(() => {
+    renderPdf().then(() => {
+      renderedZoomRef.current = zoomRef.current;
+    });
     let timeout: ReturnType<typeof setTimeout>;
     const ro = new ResizeObserver(() => {
       clearTimeout(timeout);
-      timeout = setTimeout(renderPdf, 300);
+      timeout = setTimeout(() => {
+        renderPdf().then(() => {
+          renderedZoomRef.current = zoomRef.current;
+        });
+      }, 300);
     });
     if (scrollRef.current) ro.observe(scrollRef.current);
     return () => {
@@ -258,8 +303,8 @@ export function MopPdfAnnotator({
       ro.disconnect();
       observerRef.current?.disconnect();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [renderPdf, zoom]);
+    
+  }, [renderPdf]);
 
   React.useEffect(() => {
     return () => {
@@ -269,10 +314,6 @@ export function MopPdfAnnotator({
   }, []);
 
   // --- Pinch-to-zoom (dua jari) ---
-  // Dipasang manual (bukan lewat JSX onTouchX) supaya bisa preventDefault()
-  // saat pinch berlangsung — mencegah browser ikut nge-zoom halaman penuh
-  // atau scroll ganda di saat bersamaan. Hanya aktif saat tool "Pilih",
-  // supaya tidak bentrok dengan gestur menggambar satu jari.
   React.useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -285,11 +326,8 @@ export function MopPdfAnnotator({
 
     function onTouchStart(e: TouchEvent) {
       if (e.touches.length === 2 && tool === "select") {
-        pinchStateRef.current = {
-          startDist: dist(e.touches),
-          startZoom: zoomRef.current,
-          liveZoom: zoomRef.current,
-        };
+        pinchStateRef.current = { startDist: dist(e.touches), liveZoom: zoomRef.current };
+        showControls();
       }
     }
 
@@ -298,11 +336,12 @@ export function MopPdfAnnotator({
       if (e.touches.length === 2 && pinch) {
         e.preventDefault();
         const ratio = dist(e.touches) / pinch.startDist;
-        const live = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pinch.startZoom * ratio));
+        const live = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, renderedZoomRef.current * ratio));
         pinch.liveZoom = live;
+        setZoom(live);
         if (contentWrapperRef.current) {
-          contentWrapperRef.current.style.transform = `scale(${live / zoomRef.current})`;
           contentWrapperRef.current.style.transformOrigin = "top center";
+          contentWrapperRef.current.style.transform = `scale(${live / renderedZoomRef.current})`;
         }
       }
     }
@@ -311,8 +350,8 @@ export function MopPdfAnnotator({
       const pinch = pinchStateRef.current;
       if (pinch) {
         pinchStateRef.current = null;
-        if (contentWrapperRef.current) contentWrapperRef.current.style.transform = "";
-        applyZoom(pinch.liveZoom);
+
+        commitZoom(pinch.liveZoom);
       }
     }
 
@@ -326,7 +365,7 @@ export function MopPdfAnnotator({
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [tool]);
+  }, [tool, commitZoom, showControls]);
 
   const redrawAnnotations = React.useCallback(() => {
     const canvas = annotationCanvasRef.current;
@@ -495,7 +534,12 @@ export function MopPdfAnnotator({
         </div>
       )}
 
-      <div ref={scrollRef} className="relative min-w-0 flex-1 overflow-auto rounded-md bg-zinc-800">
+      <div
+        ref={scrollRef}
+        className="relative min-w-0 flex-1 overflow-auto rounded-md bg-zinc-800"
+        onPointerMove={showControls}
+        onPointerDown={showControls}
+      >
         {loading && (
           <div className="absolute inset-0 z-20 flex items-center justify-center gap-2 bg-zinc-800/90 text-sm text-zinc-300">
             <Loader2 className="h-4 w-4 animate-spin" /> Memuat pratinjau PDF...
@@ -507,9 +551,18 @@ export function MopPdfAnnotator({
           </div>
         )}
 
-        {/* Kontrol zoom — selalu tampil (termasuk saat readOnly), nempel di
-            viewport, tidak ikut scroll bersama dokumen. */}
-        <div className="sticky top-3 z-20 float-right mr-3 flex items-center gap-0.5 rounded-md border border-zinc-700 bg-zinc-900/90 p-1 shadow-lg backdrop-blur-sm">
+        {/* Kontrol zoom — tersembunyi default, muncul saat cursor bergerak /
+            layar disentuh di dalam area preview, otomatis hilang lagi kalau
+            tidak ada aktivitas. Tidak ikut hilang saat cursor di atas
+            kontrol ini sendiri. */}
+        <div
+          className={cn(
+            "sticky top-3 z-20 float-right mr-3 flex items-center gap-0.5 rounded-md border border-zinc-700 bg-zinc-900/90 p-1 shadow-lg backdrop-blur-sm transition-opacity duration-300",
+            controlsVisible ? "opacity-100" : "pointer-events-none opacity-0"
+          )}
+          onPointerEnter={keepControlsVisible}
+          onPointerLeave={showControls}
+        >
           <button
             onClick={zoomOut}
             disabled={zoom <= MIN_ZOOM}
