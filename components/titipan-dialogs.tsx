@@ -95,7 +95,7 @@ export function AddTitipanDialog({
       setOpen(false);
       router.refresh();
     } catch {
-      toast.error("Gagal menyimpan titipan. Silakan coba lagi.");
+      toast.error("Gagal menyimpan titipan.");
     } finally {
       setSaving(false);
     }

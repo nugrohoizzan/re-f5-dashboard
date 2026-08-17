@@ -22,6 +22,7 @@ import {
   StickyNote,
   Terminal,
   Link2,
+  Boxes,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -116,9 +117,18 @@ function NavLinks({
   );
   const [detailsOpen, setDetailsOpen] = React.useState(shiftDetailsActive);
 
+  const toolsActive = TOOLS_ITEMS.some(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+  );
+  const [toolsOpen, setToolsOpen] = React.useState(toolsActive);
+
   React.useEffect(() => {
     if (shiftDetailsActive) setDetailsOpen(true);
   }, [shiftDetailsActive]);
+
+  React.useEffect(() => {
+    if (toolsActive) setToolsOpen(true);
+  }, [toolsActive]);
 
   return (
     <nav className={cn("flex flex-1 flex-col gap-0.5 overflow-y-auto", mobile ? "px-3" : "px-2")}>
@@ -157,6 +167,49 @@ function NavLinks({
       {(detailsOpen || collapsed) && (
         <div className="flex animate-in fade-in-0 slide-in-from-top-1 flex-col gap-0.5 duration-150">
           {SHIFT_DETAIL_ITEMS.map((item) => (
+            <NavLink
+              key={item.href}
+              {...item}
+              collapsed={collapsed}
+              indent
+              mobile={mobile}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Tools & Platforms: Notes & Accounts / Command CLI / Quick Links
+          digabung jadi satu dropdown, sama seperti Rincian Shift. */}
+      <button
+        type="button"
+        onClick={() => setToolsOpen((v) => !v)}
+        className={cn(
+          "focus-ring flex items-center gap-3 rounded-md text-sm font-medium transition-all duration-150",
+          mobile ? "px-4 py-3 text-base" : "px-3 py-2",
+          toolsActive && !toolsOpen
+            ? "bg-red-600/15 text-red-300"
+            : "text-zinc-200 hover:bg-zinc-800 hover:text-white"
+        )}
+        title={collapsed ? "Tools & Platforms" : undefined}
+      >
+        <Boxes className={cn("shrink-0", mobile ? "h-5 w-5" : "h-4 w-4")} />
+        {!collapsed && (
+          <>
+            <span className="flex-1 truncate text-left">Tools & Platforms</span>
+            <ChevronDown
+              className={cn(
+                "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                toolsOpen && "rotate-180"
+              )}
+            />
+          </>
+        )}
+      </button>
+
+      {(toolsOpen || collapsed) && (
+        <div className="flex animate-in fade-in-0 slide-in-from-top-1 flex-col gap-0.5 duration-150">
+          {TOOLS_ITEMS.map((item) => (
             <NavLink
               key={item.href}
               {...item}
