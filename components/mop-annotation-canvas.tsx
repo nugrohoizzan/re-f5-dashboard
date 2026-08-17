@@ -46,8 +46,7 @@ export function MopAnnotationCanvas({
   const [strokes, setStrokes] = React.useState<Stroke[]>(() => {
     try {
       const parsed = JSON.parse(initialData || "[]");
-      // Data lama yang tersimpan mungkin punya elemen null/rusak — saring di
-      // sini supaya tidak crash saat digambar, dan otomatis "sembuh" begitu
+      
       // disimpan lagi lewat tombol "Simpan Coretan".
       return Array.isArray(parsed)
         ? parsed.filter((s): s is Stroke => !!s && typeof s === "object")

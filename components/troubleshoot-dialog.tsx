@@ -112,7 +112,7 @@ export function TroubleshootDialog({
 
   async function handleDelete() {
     if (!existing) return;
-    if (!confirm("Hapus troubleshoot ini? Tindakan ini tidak dapat dibatalkan.")) return;
+    if (!confirm("Hapus troubleshoot ini? Action gabisa dibatalin.")) return;
     try {
       await deleteTroubleshoot(existing.id);
       toast.success("Berhasil dihapus.");

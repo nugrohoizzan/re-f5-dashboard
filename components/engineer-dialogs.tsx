@@ -142,11 +142,11 @@ export function ToggleActiveButton({ engineer }: { engineer: Engineer }) {
         toast.success(`${engineer.displayName} berhasil dinonaktifkan.`);
       } else {
         await reactivateEngineer(engineer.id);
-        toast.success(`${engineer.displayName} berhasil diaktifkan kembali.`);
+        toast.success(`${engineer.displayName} berhasil diaktifkan lagi.`);
       }
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal memperbarui engineer.");
+      toast.error(err instanceof Error ? err.message : "Gagal update engineer.");
     } finally {
       setBusy(false);
     }

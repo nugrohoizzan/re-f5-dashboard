@@ -49,7 +49,7 @@ export function CliCommandsManager({ commands }: { commands: CliRow[] }) {
 
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zinc-300 py-10 text-center text-sm text-zinc-500">
-          Tidak ada command yang cocok.
+          Tidak ada command yg cocok.
         </div>
       ) : (
         <div className="divide-y divide-zinc-200 rounded-lg border border-zinc-200 bg-white">

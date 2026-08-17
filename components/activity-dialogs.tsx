@@ -82,7 +82,7 @@ export function AddActivitiesDialog({
           <DialogDescription>
             {engineers.length > 0
               ? `Dicatat untuk ${engineers.map((e) => e.displayName).join(", ")}.`
-              : "Tidak ada engineer untuk tanggal/shift ini — cek Jadwal Shift."}
+              : "Gada engineer untuk tanggal/shift ini."}
           </DialogDescription>
         </DialogHeader>
 
@@ -155,7 +155,7 @@ export function EditActivityDialog({
 
   async function handleSave() {
     if (!description.trim()) {
-      toast.error("Deskripsi tidak boleh kosong.");
+      toast.error("Deskripsi gaboleh kosong.");
       return;
     }
     setSaving(true);
@@ -172,7 +172,7 @@ export function EditActivityDialog({
   }
 
   async function handleDelete() {
-    if (!confirm("Hapus aktivitas ini? Tindakan ini tidak dapat dibatalkan.")) return;
+    if (!confirm("Hapus aktivitas ini? Action gabisa dibatalin.")) return;
     try {
       await deleteActivity(activity.id);
       toast.success("Aktivitas berhasil dihapus.");

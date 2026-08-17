@@ -57,7 +57,7 @@ export function ToolNoteFormDialog({
       "image/webp",
     ];
     if (!allowed.includes(f.type)) {
-      toast.error("Format tidak didukung. Gunakan PDF, DOCX, atau gambar.");
+      toast.error("Format tidak didukung.");
       return;
     }
     if (f.size > 10 * 1024 * 1024) {
@@ -178,7 +178,7 @@ export function ToolNoteFormDialog({
               </div>
               <div>
                 <Label htmlFor="tn-pass">
-                  Password {mode === "edit" && <span className="text-zinc-400">(kosongkan jika tidak diubah)</span>}
+                  Password {mode === "edit" && <span className="text-zinc-400">(kosongin kalo ga diubah)</span>}
                 </Label>
                 <Input
                   id="tn-pass"

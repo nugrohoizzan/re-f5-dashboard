@@ -47,7 +47,7 @@ export function ToolNoteDetailPanel({ note }: { note: NoteDetail }) {
   }
 
   async function handleDelete() {
-    if (!confirm("Hapus catatan ini beserta lampirannya? Tindakan ini tidak bisa dibatalkan.")) return;
+    if (!confirm("Hapus catatan ini beserta lampirannya? Tindakan ini gabisa dicancel.")) return;
     setDeleting(true);
     const res = await deleteToolNote(note.id);
     setDeleting(false);

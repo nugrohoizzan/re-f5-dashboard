@@ -257,7 +257,7 @@ export function TitipanDetailDialog({
   }
 
   async function handleDelete() {
-    if (!confirm("Hapus titipan ini? Tindakan ini tidak dapat dibatalkan.")) return;
+    if (!confirm("Hapus titipan ini? Action gabisa dibatalin.")) return;
     setBusy(true);
     try {
       await deleteTitipan(task.id);

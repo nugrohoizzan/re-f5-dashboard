@@ -42,7 +42,7 @@ export function ToolNotesList({ notes }: { notes: NoteRow[] }) {
 
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zinc-300 py-10 text-center text-sm text-zinc-500">
-          Tidak ada catatan yang cocok.
+          Tidak ada catatan yg cocok.
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

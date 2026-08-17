@@ -9,7 +9,7 @@ export function EngineerBadges({
   if (engineers.length === 0) {
     return (
       <p className="text-sm text-zinc-400">
-        Belum ada engineer terjadwal untuk tanggal dan shift ini.
+        Belum ada engineer terjadwal buat tanggal sm shift ini.
       </p>
     );
   }

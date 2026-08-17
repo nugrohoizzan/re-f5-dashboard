@@ -41,7 +41,7 @@ export function MopEditDialog({ mop }: { mop: Mop }) {
       setOpen(false);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Gagal memperbarui MOP.");
+      toast.error(err instanceof Error ? err.message : "Gagal update MOP.");
     } finally {
       setSaving(false);
     }
@@ -101,7 +101,7 @@ export function MopDeleteButton({ id }: { id: number }) {
   const [busy, setBusy] = React.useState(false);
 
   async function handleDelete() {
-    if (!confirm("Hapus MOP ini beserta file dan coretannya? Tindakan ini tidak dapat dibatalkan.")) return;
+    if (!confirm("Hapus MOP ini beserta file dan coretannya? Action gabisa dibatalin.")) return;
     setBusy(true);
     try {
       await deleteMop(id);
