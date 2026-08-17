@@ -104,7 +104,7 @@ export default async function DashboardPage({
             <TroubleshootDialog date={date} shift={shift} engineers={shiftEngineers} />
           </div>
           <div className="space-y-2">
-            {dayTroubleshoot.length === 0 && <EmptyState text="Belum ada troubleshoot yang dicatat untuk shift ini." />}
+            {dayTroubleshoot.length === 0 && <EmptyState text="gada troubleshoot or isu." />}
             {dayTroubleshoot.map((t) => (
               <Card key={t.id} className="hover:-translate-y-0.5 hover:shadow-md">
                 <CardContent className="flex items-start justify-between gap-3 pt-4">
@@ -132,7 +132,7 @@ export default async function DashboardPage({
             <AddActivitiesDialog date={date} shift={shift} engineers={shiftEngineers} />
           </div>
           <div className="space-y-2">
-            {dayActivities.length === 0 && <EmptyState text="Belum ada aktivitas yang dicatat untuk shift ini." />}
+            {dayActivities.length === 0 && <EmptyState text="Gada kerjaan." />}
             {dayActivities.map((a) => (
               <Card key={a.id}>
                 <CardContent className="flex items-center justify-between gap-3 py-3">
@@ -152,7 +152,7 @@ export default async function DashboardPage({
             <AddTitipanDialog date={date} shift={shift} engineers={shiftEngineers} />
           </div>
           <div className="space-y-2">
-            {openTitipan.length === 0 && <EmptyState text="Tidak ada titipan terbuka saat ini — mantap." />}
+            {openTitipan.length === 0 && <EmptyState text="Gada handover josjis pol." />}
             {openTitipan.map((t) => (
               <Card key={t.id} className="hover:-translate-y-0.5 hover:shadow-md">
                 <CardContent className="flex items-start justify-between gap-3 pt-4">
