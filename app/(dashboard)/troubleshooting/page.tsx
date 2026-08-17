@@ -57,7 +57,7 @@ export default async function TroubleshootingPage({
       <div className="space-y-2">
         {rows.length === 0 && (
           <div className="rounded-lg border border-dashed border-zinc-200 bg-white px-4 py-10 text-center text-sm text-zinc-400">
-            Belum ada troubleshoot untuk tanggal dan shift ini.
+            Blom ada troubleshoot.
           </div>
         )}
         {rows.map((t) => (
