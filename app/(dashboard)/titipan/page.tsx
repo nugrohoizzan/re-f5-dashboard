@@ -105,7 +105,7 @@ export default async function TitipanPage({
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-zinc-400">
-                    Tidak ada data saat ini.
+                    Gada data saat ini.
                   </td>
                 </tr>
               )}
