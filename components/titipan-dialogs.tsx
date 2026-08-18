@@ -28,26 +28,13 @@ import {
 import type { ResolvedEngineer } from "@/lib/schedule-rules";
 import type { HandoverTask, HandoverTaskHistoryEntry } from "@/lib/db/schema";
 import { formatDateLong } from "@/lib/utils";
-
+import { CATEGORY_LABEL, CATEGORY_OPTIONS, type TitipanCategory } from "@/lib/titipan-categories";
 
 const STATUS_LABEL_ID: Record<string, string> = {
   pending: "pending",
   in_progress: "sedang diproses",
   completed: "selesai",
 };
-
-export type TitipanCategory = "none" | "support" | "mop" | "scm" | "ncm" | "ekse";
-
-export const CATEGORY_LABEL: Record<TitipanCategory, string> = {
-  none: "Tidak ada",
-  support: "Support",
-  mop: "MOP",
-  scm: "SCM",
-  ncm: "NCM",
-  ekse: "Eksekusi",
-};
-
-const CATEGORY_OPTIONS: TitipanCategory[] = ["none", "support", "mop", "scm", "ncm", "ekse"];
 
 const SUPPORT_ACTION_OPTIONS = ["Enable/Disable", "Ubah Ratio/Traffic"];
 

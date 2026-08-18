@@ -5,7 +5,8 @@ import { handoverTasks, engineers } from "@/lib/db/schema";
 import { getEngineersForShift } from "@/lib/schedule-rules";
 import { StatusBadge } from "@/components/status-badge";
 import { Card } from "@/components/ui/card";
-import { AddTitipanDialog, TitipanDetailDialog, CATEGORY_LABEL, type TitipanCategory } from "@/components/titipan-dialogs";
+import { AddTitipanDialog, TitipanDetailDialog } from "@/components/titipan-dialogs";
+import { CATEGORY_LABEL, type TitipanCategory } from "@/lib/titipan-categories";
 import { SearchBox } from "@/components/search-box";
 import { formatDateLong, todayISO, cn } from "@/lib/utils";
 
