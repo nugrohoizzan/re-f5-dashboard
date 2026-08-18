@@ -43,7 +43,7 @@ export function QuickLinksManager({ links }: { links: LinkRow[] }) {
 
       {filtered.length === 0 ? (
         <div className="rounded-lg border border-dashed border-zinc-300 py-10 text-center text-sm text-zinc-500">
-          Tidak ada link yg cocok.
+          Tidak ada link yang cocok.
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -60,9 +60,7 @@ function QuickLinkCard({ link }: { link: LinkRow }) {
   const router = useRouter();
   const [deleting, setDeleting] = React.useState(false);
 
-  async function handleDelete(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  async function handleDelete() {
     if (!confirm("Hapus link ini?")) return;
     setDeleting(true);
     const res = await deleteQuickLink(link.id);
@@ -76,26 +74,23 @@ function QuickLinkCard({ link }: { link: LinkRow }) {
   }
 
   return (
-    <a
-      href={link.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md"
-    >
-      <div className="flex min-w-0 items-center gap-2">
+    <div className="group relative flex items-center justify-between gap-2 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
+      <a
+        href={link.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex min-w-0 flex-1 items-center gap-2"
+      >
         <ExternalLink className="h-4 w-4 shrink-0 text-zinc-400 group-hover:text-red-600" />
         <span className="truncate text-sm font-medium text-zinc-900 group-hover:text-red-600">{link.title}</span>
-      </div>
+      </a>
       <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         <QuickLinkFormDialog
           mode="edit"
           link={link}
           trigger={
             <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
+              type="button"
               className="rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -103,6 +98,7 @@ function QuickLinkCard({ link }: { link: LinkRow }) {
           }
         />
         <button
+          type="button"
           onClick={handleDelete}
           disabled={deleting}
           className="rounded p-1 text-zinc-400 hover:bg-red-50 hover:text-red-600"
@@ -110,7 +106,7 @@ function QuickLinkCard({ link }: { link: LinkRow }) {
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
-    </a>
+    </div>
   );
 }
 

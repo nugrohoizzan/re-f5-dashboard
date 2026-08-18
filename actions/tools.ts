@@ -98,7 +98,7 @@ export async function updateToolNote(
     category?: string;
     content?: string;
     accountUsername?: string;
-    accountPassword?: string; // kosongkan kalau tidak mau ganti password
+    accountPassword?: string; 
     accountUrl?: string;
   }
 ): Promise<ActionResult> {
@@ -144,8 +144,6 @@ export async function deleteToolNote(id: number): Promise<ActionResult> {
   return { success: true };
 }
 
-// Password TIDAK pernah ikut payload halaman awal — baru di-decrypt saat
-// tombol "mata" diklik, lewat action khusus ini.
 export async function revealToolNotePassword(id: number): Promise<{ password?: string; error?: string }> {
   await requireSession();
   try {

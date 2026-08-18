@@ -5,7 +5,7 @@ import { handoverTasks, engineers } from "@/lib/db/schema";
 import { getEngineersForShift } from "@/lib/schedule-rules";
 import { StatusBadge } from "@/components/status-badge";
 import { Card } from "@/components/ui/card";
-import { AddTitipanDialog, TitipanDetailDialog } from "@/components/titipan-dialogs";
+import { AddTitipanDialog, TitipanDetailDialog, CATEGORY_LABEL, type TitipanCategory } from "@/components/titipan-dialogs";
 import { SearchBox } from "@/components/search-box";
 import { formatDateLong, todayISO, cn } from "@/lib/utils";
 
@@ -40,6 +40,7 @@ export default async function TitipanPage({
       .select({
         id: handoverTasks.id,
         title: handoverTasks.title,
+        category: handoverTasks.category,
         description: handoverTasks.description,
         ticketReference: handoverTasks.ticketReference,
         sourceDate: handoverTasks.sourceDate,
@@ -94,6 +95,7 @@ export default async function TitipanPage({
             <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className="px-4 py-2.5">Tugas</th>
+                <th className="px-4 py-2.5">Kategori</th>
                 <th className="px-4 py-2.5">Tiket</th>
                 <th className="px-4 py-2.5">Sumber</th>
                 <th className="px-4 py-2.5">Engineer</th>
@@ -104,7 +106,7 @@ export default async function TitipanPage({
             <tbody className="divide-y divide-zinc-100">
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-zinc-400">
+                  <td colSpan={7} className="px-4 py-10 text-center text-zinc-400">
                     Gada data saat ini.
                   </td>
                 </tr>
@@ -118,6 +120,11 @@ export default async function TitipanPage({
                         <span className="font-medium text-zinc-900 hover:text-red-700">{t.title}</span>
                       }
                     />
+                  </td>
+                  <td className="px-4 py-2.5 text-zinc-500">
+                    {t.category && t.category !== "none"
+                      ? CATEGORY_LABEL[t.category as TitipanCategory] ?? t.category
+                      : "—"}
                   </td>
                   <td className="px-4 py-2.5 font-mono text-xs text-zinc-500">
                     {t.ticketReference ?? "—"}

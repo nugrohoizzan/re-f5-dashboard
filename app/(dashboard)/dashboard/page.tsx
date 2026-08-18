@@ -37,6 +37,7 @@ export default async function DashboardPage({
       .select({
         id: handoverTasks.id,
         title: handoverTasks.title,
+        category: handoverTasks.category,
         description: handoverTasks.description,
         ticketReference: handoverTasks.ticketReference,
         sourceDate: handoverTasks.sourceDate,

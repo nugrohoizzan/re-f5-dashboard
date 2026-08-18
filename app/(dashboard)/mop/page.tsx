@@ -34,6 +34,7 @@ export default async function MopPage({
       title: mops.title,
       scrCode: mops.scrCode,
       requestedBy: mops.requestedBy,
+      description: mops.description,
       fileType: mops.fileType,
       status: mops.status,
       createdAt: mops.createdAt,
@@ -89,6 +90,9 @@ export default async function MopPage({
               </div>
               <p className="line-clamp-2 text-sm font-medium text-zinc-900">{m.title}</p>
               {m.scrCode && <p className="mt-1 font-mono text-xs text-zinc-400">{m.scrCode}</p>}
+              {m.description && (
+                <p className="mt-1 line-clamp-2 text-xs text-zinc-500">{m.description}</p>
+              )}
               <div className="mt-3 flex items-center justify-between text-xs text-zinc-400">
                 <span>{m.uploaderName ?? "—"}</span>
                 <span>{formatTimestamp(m.createdAt)}</span>

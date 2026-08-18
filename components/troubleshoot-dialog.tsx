@@ -25,8 +25,7 @@ type FormState = {
   title: string;
   description: string;
   ticketReference: string;
-  affectedVs: string;
-  affectedPool: string;
+  affectedObject: string;
   resolution: string;
   status: "pending" | "in_progress" | "completed";
 };
@@ -35,11 +34,16 @@ const EMPTY: FormState = {
   title: "",
   description: "",
   ticketReference: "",
-  affectedVs: "",
-  affectedPool: "",
+  affectedObject: "",
   resolution: "",
   status: "pending",
 };
+
+// Data lama mungkin punya affectedVs & affectedPool terpisah — gabungkan
+// jadi satu string supaya tidak hilang saat item lama dibuka untuk diedit.
+function combineAffected(vs?: string | null, pool?: string | null) {
+  return [vs, pool].filter(Boolean).join(" / ");
+}
 
 export function TroubleshootDialog({
   date,
@@ -62,8 +66,7 @@ export function TroubleshootDialog({
           title: existing.title,
           description: existing.description ?? "",
           ticketReference: existing.ticketReference ?? "",
-          affectedVs: existing.affectedVs ?? "",
-          affectedPool: existing.affectedPool ?? "",
+          affectedObject: combineAffected(existing.affectedVs, existing.affectedPool),
           resolution: existing.resolution ?? "",
           status: existing.status,
         }
@@ -81,6 +84,18 @@ export function TroubleshootDialog({
       return;
     }
     setSaving(true);
+    // Backend/DB masih pakai 2 kolom terpisah (affectedVs, affectedPool);
+    // di form sekarang sudah digabung jadi satu, jadi semuanya dikirim
+    // lewat affectedVs saja dan affectedPool dikosongkan.
+    const payload = {
+      title: form.title,
+      description: form.description,
+      ticketReference: form.ticketReference,
+      affectedVs: form.affectedObject,
+      affectedPool: "",
+      resolution: form.resolution,
+      status: form.status,
+    };
     try {
       if (existing) {
         await updateTroubleshoot({
@@ -88,7 +103,7 @@ export function TroubleshootDialog({
           date: existing.date,
           shift: existing.shift,
           engineerId: existing.engineerId,
-          ...form,
+          ...payload,
         });
         toast.success("Troubleshoot berhasil diperbarui.");
       } else {
@@ -96,7 +111,7 @@ export function TroubleshootDialog({
           date,
           shift,
           engineerId: engineers[0]?.id ?? null,
-          ...form,
+          ...payload,
         });
         toast.success("Troubleshoot berhasil ditambahkan.");
         setForm(EMPTY);
@@ -112,7 +127,7 @@ export function TroubleshootDialog({
 
   async function handleDelete() {
     if (!existing) return;
-    if (!confirm("Hapus troubleshoot ini? Action gabisa dibatalin.")) return;
+    if (!confirm("Hapus troubleshoot ini? Tindakan ini tidak dapat dibatalkan.")) return;
     try {
       await deleteTroubleshoot(existing.id);
       toast.success("Berhasil dihapus.");
@@ -172,15 +187,13 @@ export function TroubleshootDialog({
               </Select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>VS terdampak (opsional)</Label>
-              <Input value={form.affectedVs} onChange={(e) => set("affectedVs", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Pool/member terdampak (opsional)</Label>
-              <Input value={form.affectedPool} onChange={(e) => set("affectedPool", e.target.value)} />
-            </div>
+          <div className="space-y-1.5">
+            <Label>Objek yang terdampak (opsional)</Label>
+            <Input
+              value={form.affectedObject}
+              onChange={(e) => set("affectedObject", e.target.value)}
+              placeholder="cth. VS_APP01, Pool_Member_10.1.1.5"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Resolusi / RCA (opsional)</Label>

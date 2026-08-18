@@ -69,6 +69,9 @@ export default async function MopDetailPage({ params }: { params: { id: string }
               <> · Direview {reviewer[0].name}</>
             )}
           </p>
+          {mop.description && (
+            <p className="mt-1.5 whitespace-pre-wrap text-sm text-zinc-600">{mop.description}</p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

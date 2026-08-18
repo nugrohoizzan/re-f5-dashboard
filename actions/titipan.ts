@@ -24,6 +24,7 @@ export async function createTitipanBatch(input: unknown) {
     .values(
       data.items.map((item) => ({
         title: item.title,
+        category: item.category ?? "none",
         ticketReference: item.ticketReference || null,
         description: item.description || null,
         dueDate: item.dueDate || null,
@@ -68,6 +69,7 @@ export async function updateTitipan(input: unknown) {
     .update(handoverTasks)
     .set({
       title: data.title,
+      category: data.category ?? "none",
       ticketReference: data.ticketReference || null,
       description: data.description || null,
       dueDate: data.dueDate || null,
@@ -128,18 +130,6 @@ export async function changeTitipanStatus(
     performedBy: userId,
   });
 
-  revalidatePath("/titipan");
-  revalidatePath("/dashboard");
-}
-
-export async function carryOverTitipan(id: number) {
-  const session = await requireUser();
-  await db.insert(handoverTaskHistory).values({
-    taskId: id,
-    action: "carried_over",
-    notes: "Carried over to next shift.",
-    performedBy: Number(session.user.id),
-  });
   revalidatePath("/titipan");
   revalidatePath("/dashboard");
 }

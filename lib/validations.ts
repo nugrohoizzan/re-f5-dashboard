@@ -36,8 +36,11 @@ export const troubleshootSchema = z.object({
   status: z.enum(["pending", "in_progress", "completed"]),
 });
 
+export const titipanCategorySchema = z.enum(["none", "support", "mop", "scm", "ncm", "ekse"]);
+
 export const titipanInputSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
+  category: titipanCategorySchema.default("none"),
   ticketReference: z.string().max(80).optional().or(z.literal("")),
   description: z.string().max(4000).optional().or(z.literal("")),
   dueDate: z.string().optional().or(z.literal("")),

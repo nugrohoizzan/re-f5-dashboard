@@ -34,6 +34,15 @@ export const troubleshootStatusEnum = pgEnum("troubleshoot_status", [
   "completed",
 ]);
 
+export const titipanCategoryEnum = pgEnum("titipan_category", [
+  "none",
+  "support",
+  "mop",
+  "scm",
+  "ncm",
+  "ekse",
+]);
+
 export const titipanStatusEnum = pgEnum("titipan_status", [
   "pending",
   "in_progress",
@@ -218,6 +227,7 @@ export const handoverTasks = pgTable(
     ticketReference: varchar("ticket_reference", { length: 80 }),
     sourceDate: date("source_date", { mode: "string" }).notNull(),
     sourceShift: shiftEnum("source_shift").notNull(),
+    category: titipanCategoryEnum("category").notNull().default("none"),
     createdBy: integer("created_by").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -253,7 +263,7 @@ export const handoverTaskHistory = pgTable(
     taskId: integer("task_id")
       .notNull()
       .references(() => handoverTasks.id, { onDelete: "cascade" }),
-    action: varchar("action", { length: 60 }).notNull(), // created | status_changed | carried_over | note_added | edited
+    action: varchar("action", { length: 60 }).notNull(), // created | status_changed | note_added | edited
     notes: text("notes"),
     performedBy: integer("performed_by").references(() => users.id, {
       onDelete: "set null",

@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TroubleshootDialog } from "@/components/troubleshoot-dialog";
 import { SearchBox } from "@/components/search-box";
 import { todayISO } from "@/lib/utils";
+import { Ticket, Boxes, CheckCircle2 } from "lucide-react";
 
 export default async function TroubleshootingPage({
   searchParams,
@@ -26,7 +27,8 @@ export default async function TroubleshootingPage({
         or(
           ilike(troubleshooting.title, `%${q}%`),
           ilike(troubleshooting.ticketReference, `%${q}%`),
-          ilike(troubleshooting.affectedVs, `%${q}%`)
+          ilike(troubleshooting.affectedVs, `%${q}%`),
+          ilike(troubleshooting.affectedPool, `%${q}%`)
         )
       )
     : baseFilter;
@@ -48,7 +50,7 @@ export default async function TroubleshootingPage({
         <CardContent className="space-y-4 pt-4">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <DateShiftPicker date={date} shift={shift} shiftTimes={shiftTimes} />
-            <SearchBox placeholder="Cari judul, tiket, atau VS..." />
+            <SearchBox placeholder="Cari judul, tiket, atau objek terdampak..." />
           </div>
           <EngineerBadges engineers={shiftEngineers} />
         </CardContent>
@@ -60,22 +62,45 @@ export default async function TroubleshootingPage({
             Blom ada troubleshoot.
           </div>
         )}
-        {rows.map((t) => (
-          <Card key={t.id} className="hover:-translate-y-0.5 hover:shadow-md">
-            <CardContent className="flex items-start justify-between gap-3 pt-4">
-              <div className="min-w-0">
-                <TroubleshootDialog date={date} shift={shift} engineers={shiftEngineers} existing={t} />
-                {t.ticketReference && (
-                  <p className="mt-0.5 font-mono text-xs text-zinc-400">{t.ticketReference}</p>
+        {rows.map((t) => {
+          const affected = [t.affectedVs, t.affectedPool].filter(Boolean).join(" / ");
+          return (
+            <Card key={t.id} className="hover:-translate-y-0.5 hover:shadow-md">
+              <CardContent className="space-y-2 pt-4">
+                <div className="flex items-start justify-between gap-3">
+                  <TroubleshootDialog date={date} shift={shift} engineers={shiftEngineers} existing={t} />
+                  <StatusBadge status={t.status} />
+                </div>
+
+                {(t.ticketReference || affected) && (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+                    {t.ticketReference && (
+                      <span className="inline-flex items-center gap-1 font-mono">
+                        <Ticket className="h-3 w-3 shrink-0" /> {t.ticketReference}
+                      </span>
+                    )}
+                    {affected && (
+                      <span className="inline-flex items-center gap-1">
+                        <Boxes className="h-3 w-3 shrink-0" /> {affected}
+                      </span>
+                    )}
+                  </div>
                 )}
+
                 {t.description && (
-                  <p className="mt-1 line-clamp-2 text-sm text-zinc-500">{t.description}</p>
+                  <p className="line-clamp-2 text-sm text-zinc-500">{t.description}</p>
                 )}
-              </div>
-              <StatusBadge status={t.status} />
-            </CardContent>
-          </Card>
-        ))}
+
+                {t.resolution && (
+                  <div className="flex items-start gap-1.5 rounded-md border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 text-xs text-emerald-700">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <p className="line-clamp-2">{t.resolution}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

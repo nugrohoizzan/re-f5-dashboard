@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Trash2, ArrowRightCircle } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,7 +23,6 @@ import {
   updateTitipan,
   deleteTitipan,
   changeTitipanStatus,
-  carryOverTitipan,
   getTitipanHistory,
 } from "@/actions/titipan";
 import type { ResolvedEngineer } from "@/lib/schedule-rules";
@@ -37,8 +36,26 @@ const STATUS_LABEL_ID: Record<string, string> = {
   completed: "selesai",
 };
 
+export type TitipanCategory = "none" | "support" | "mop" | "scm" | "ncm" | "ekse";
+
+export const CATEGORY_LABEL: Record<TitipanCategory, string> = {
+  none: "Tidak ada",
+  support: "Support",
+  mop: "MOP",
+  scm: "SCM",
+  ncm: "NCM",
+  ekse: "Eksekusi",
+};
+
+const CATEGORY_OPTIONS: TitipanCategory[] = ["none", "support", "mop", "scm", "ncm", "ekse"];
+
+// Untuk kategori "support", field tiket diganti dropdown jenis aksi (bukan
+// nomor tiket bebas) — nilainya tetap disimpan di kolom ticketReference.
+const SUPPORT_ACTION_OPTIONS = ["Enable/Disable", "Ubah Ratio/Traffic"];
+
 type Row = {
   title: string;
+  category: TitipanCategory;
   ticketReference: string;
   description: string;
   dueDate: string;
@@ -47,11 +64,40 @@ type Row = {
 
 const EMPTY_ROW: Row = {
   title: "",
+  category: "none",
   ticketReference: "",
   description: "",
   dueDate: "",
   status: "pending",
 };
+
+// Field tiket/aksi hanya relevan kalau kategorinya bukan "none".
+function TicketField({
+  category,
+  value,
+  onChange,
+}: {
+  category: TitipanCategory;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  if (category === "none") return null;
+  if (category === "support") {
+    return (
+      <Select value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Pilih aksi support...</option>
+        {SUPPORT_ACTION_OPTIONS.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </Select>
+    );
+  }
+  return (
+    <Input placeholder="Tiket / SCR" value={value} onChange={(e) => onChange(e.target.value)} />
+  );
+}
 
 export function AddTitipanDialog({
   date,
@@ -95,7 +141,7 @@ export function AddTitipanDialog({
       setOpen(false);
       router.refresh();
     } catch {
-      toast.error("Gagal menyimpan titipan.");
+      toast.error("Gagal menyimpan titipan. Silakan coba lagi.");
     } finally {
       setSaving(false);
     }
@@ -112,7 +158,7 @@ export function AddTitipanDialog({
           <DialogDescription>
             {engineers.length > 0
               ? `Dibuat oleh ${engineers.map((e) => e.displayName).join(", ")}. Tetap terlihat oleh shift berikutnya sampai selesai.`
-              : "Tidak ada engineer untuk tanggal/shift ini."}
+              : "Tidak ada engineer untuk tanggal/shift ini — cek Jadwal Shift."}
           </DialogDescription>
         </DialogHeader>
 
@@ -147,11 +193,18 @@ export function AddTitipanDialog({
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <Input
-                  placeholder="Tiket / SCR (opsional (kalo MOP))"
-                  value={row.ticketReference}
-                  onChange={(e) => updateRow(idx, { ticketReference: e.target.value })}
-                />
+                <Select
+                  value={row.category}
+                  onChange={(e) =>
+                    updateRow(idx, { category: e.target.value as TitipanCategory, ticketReference: "" })
+                  }
+                >
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <option key={c} value={c}>
+                      {CATEGORY_LABEL[c]}
+                    </option>
+                  ))}
+                </Select>
                 <Input
                   type="date"
                   placeholder="Tanggal jatuh tempo (opsional)"
@@ -159,6 +212,15 @@ export function AddTitipanDialog({
                   onChange={(e) => updateRow(idx, { dueDate: e.target.value })}
                 />
               </div>
+              {row.category !== "none" && (
+                <div className="mt-2">
+                  <TicketField
+                    category={row.category}
+                    value={row.ticketReference}
+                    onChange={(v) => updateRow(idx, { ticketReference: v })}
+                  />
+                </div>
+              )}
               <Textarea
                 className="mt-2"
                 placeholder="Catatan (opsional)"
@@ -200,6 +262,7 @@ export function TitipanDetailDialog({
   const [history, setHistory] = React.useState<HandoverTaskHistoryEntry[]>([]);
   const [form, setForm] = React.useState({
     title: task.title,
+    category: (task.category ?? "none") as TitipanCategory,
     ticketReference: task.ticketReference ?? "",
     description: task.description ?? "",
     dueDate: task.dueDate ?? "",
@@ -227,20 +290,6 @@ export function TitipanDetailDialog({
     }
   }
 
-  async function handleCarryOver() {
-    setBusy(true);
-    try {
-      await carryOverTitipan(task.id);
-      toast.success("Berhasil dititipkan ke shift berikutnya.");
-      router.refresh();
-      setOpen(false);
-    } catch {
-      toast.error("Gagal melakukan carry over.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function handleSaveEdit() {
     setBusy(true);
     try {
@@ -257,7 +306,7 @@ export function TitipanDetailDialog({
   }
 
   async function handleDelete() {
-    if (!confirm("Hapus titipan ini? Action gabisa dibatalin.")) return;
+    if (!confirm("Hapus titipan ini? Tindakan ini tidak dapat dibatalkan.")) return;
     setBusy(true);
     try {
       await deleteTitipan(task.id);
@@ -289,11 +338,23 @@ export function TitipanDetailDialog({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Tiket / SCR</Label>
-                  <Input
-                    value={form.ticketReference}
-                    onChange={(e) => setForm((f) => ({ ...f, ticketReference: e.target.value }))}
-                  />
+                  <Label>Kategori</Label>
+                  <Select
+                    value={form.category}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        category: e.target.value as TitipanCategory,
+                        ticketReference: "",
+                      }))
+                    }
+                  >
+                    {CATEGORY_OPTIONS.map((c) => (
+                      <option key={c} value={c}>
+                        {CATEGORY_LABEL[c]}
+                      </option>
+                    ))}
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Tanggal jatuh tempo</Label>
@@ -304,6 +365,16 @@ export function TitipanDetailDialog({
                   />
                 </div>
               </div>
+              {form.category !== "none" && (
+                <div className="space-y-1.5">
+                  <Label>{form.category === "support" ? "Aksi Support" : "Tiket / SCR"}</Label>
+                  <TicketField
+                    category={form.category}
+                    value={form.ticketReference}
+                    onChange={(v) => setForm((f) => ({ ...f, ticketReference: v }))}
+                  />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Catatan</Label>
                 <Textarea
@@ -325,9 +396,14 @@ export function TitipanDetailDialog({
         ) : (
           <>
             <DialogHeader>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <DialogTitle>{task.title}</DialogTitle>
                 <StatusBadge status={task.status} />
+                {task.category && task.category !== "none" && (
+                  <span className="inline-flex items-center rounded-md border border-zinc-200 bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                    {CATEGORY_LABEL[task.category as TitipanCategory] ?? task.category}
+                  </span>
+                )}
               </div>
               <DialogDescription>
                 {task.ticketReference && <span className="font-mono">{task.ticketReference}</span>}
@@ -366,9 +442,11 @@ export function TitipanDetailDialog({
                 <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
                   Edit
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleCarryOver} disabled={busy}>
-                  <ArrowRightCircle className="h-4 w-4" /> Carry Over
-                </Button>
+                {task.status !== "pending" && (
+                  <Button variant="outline" size="sm" onClick={() => handleStatusChange("pending")} disabled={busy}>
+                    Tandai Pending
+                  </Button>
+                )}
                 {task.status !== "in_progress" && (
                   <Button variant="outline" size="sm" onClick={() => handleStatusChange("in_progress")} disabled={busy}>
                     Tandai Sedang Diproses
