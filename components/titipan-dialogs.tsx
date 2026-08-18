@@ -49,8 +49,6 @@ export const CATEGORY_LABEL: Record<TitipanCategory, string> = {
 
 const CATEGORY_OPTIONS: TitipanCategory[] = ["none", "support", "mop", "scm", "ncm", "ekse"];
 
-// Untuk kategori "support", field tiket diganti dropdown jenis aksi (bukan
-// nomor tiket bebas) — nilainya tetap disimpan di kolom ticketReference.
 const SUPPORT_ACTION_OPTIONS = ["Enable/Disable", "Ubah Ratio/Traffic"];
 
 type Row = {
@@ -207,7 +205,7 @@ export function AddTitipanDialog({
                 </Select>
                 <Input
                   type="date"
-                  placeholder="Tanggal jatuh tempo (opsional)"
+                  placeholder="Deadline (opsional)"
                   value={row.dueDate}
                   onChange={(e) => updateRow(idx, { dueDate: e.target.value })}
                 />
@@ -357,7 +355,7 @@ export function TitipanDetailDialog({
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Tanggal jatuh tempo</Label>
+                  <Label>Deadline</Label>
                   <Input
                     type="date"
                     value={form.dueDate}
@@ -417,7 +415,7 @@ export function TitipanDetailDialog({
             )}
 
             {task.dueDate && (
-              <p className="text-xs text-zinc-400">Jatuh tempo {formatDateLong(task.dueDate)}</p>
+              <p className="text-xs text-zinc-400">Deadline {formatDateLong(task.dueDate)}</p>
             )}
 
             {history.length > 0 && (
