@@ -96,6 +96,7 @@ export default async function TitipanPage({
             <thead className="bg-zinc-50 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
               <tr>
                 <th className="px-4 py-2.5">Tugas</th>
+                <th className="px-4 py-2.5">Kategori</th>
                 <th className="px-4 py-2.5">Tiket</th>
                 <th className="px-4 py-2.5">Sumber</th>
                 <th className="px-4 py-2.5">Engineer</th>
@@ -120,6 +121,11 @@ export default async function TitipanPage({
                         <span className="font-medium text-zinc-900 hover:text-red-700">{t.title}</span>
                       }
                     />
+                  </td>
+                  <td className="px-4 py-2.5 text-zinc-500">
+                    {t.category && t.category !== "none"
+                      ? CATEGORY_LABEL[t.category as TitipanCategory] ?? t.category
+                      : "—"}
                   </td>
                   <td className="px-4 py-2.5 font-mono text-xs text-zinc-500">
                     {t.ticketReference ?? "—"}
