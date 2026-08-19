@@ -44,3 +44,18 @@ export function todayISO(): string {
   const local = new Date(now.getTime() - tz * 60000);
   return local.toISOString().slice(0, 10);
 }
+
+// Jam saja, format "14.30" ala UI kalender.
+export function formatTimeHM(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+}
+
+// Value yang dimengerti <input type="datetime-local"> ("YYYY-MM-DDTHH:mm"),
+// dalam waktu lokal browser (bukan UTC, biar gak geser jam pas ditampilkan).
+export function toDateTimeLocalValue(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const tz = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - tz * 60000);
+  return local.toISOString().slice(0, 16);
+}

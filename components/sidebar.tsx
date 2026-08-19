@@ -23,12 +23,14 @@ import {
   Terminal,
   Link2,
   Boxes,
+  CalendarRange,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TOP_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/schedule", label: "Jadwal Shift", icon: CalendarDays },
+  { href: "/calendar", label: "Calendar", icon: CalendarRange },
   { href: "/mop", label: "MOP", icon: FileText },
 ];
 

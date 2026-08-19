@@ -71,3 +71,22 @@ export const mopNoteSchema = z.object({
   mopId: z.number().int(),
   note: z.string().min(1, "Catatan tidak boleh kosong").max(2000),
 });
+
+export const calendarEventEndTypeSchema = z.enum(["undetermined", "in_progress", "determined"]);
+
+export const calendarEventBaseSchema = z.object({
+  title: z.string().min(1, "Judul wajib diisi").max(200),
+  description: z.string().max(4000).optional().or(z.literal("")),
+  startAt: z.string().min(1, "Waktu mulai wajib diisi"), // ISO string
+  endType: calendarEventEndTypeSchema,
+  plannedEndAt: z.string().optional().or(z.literal("")),
+});
+
+const calendarEventEndRefinement = (data: { endType: string; plannedEndAt?: string }) =>
+  data.endType !== "determined" || !!data.plannedEndAt;
+
+export const calendarEventSchema = calendarEventBaseSchema.refine(calendarEventEndRefinement, {
+  message: "Waktu selesai wajib diisi untuk tipe 'Ada Kepastian'.",
+  path: ["plannedEndAt"],
+});
+

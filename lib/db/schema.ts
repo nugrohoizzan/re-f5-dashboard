@@ -431,6 +431,47 @@ export type CliCommand = typeof cliCommands.$inferSelect;
 export type QuickLink = typeof quickLinks.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Calendar — activity di luar aktivitas harian/titipan/troubleshoot, cth.
+// rencana switch over / switch back. Waktu mulai selalu pasti (timestamp),
+// tapi waktu selesai punya 3 jenis:
+//   - "undetermined": belum bisa ditentukan sama sekali, tetap dianggap
+//     berjalan (nge-trace tiap hari di kalender) sampai diedit manual.
+//   - "in_progress": lagi berjalan, muncul tombol "Tandai Selesai" untuk
+//     langsung mengunci actualEndAt.
+//   - "determined": sudah pasti sejak awal, plannedEndAt langsung diisi.
+// actualEndAt adalah waktu selesai SEBENARNYA (diisi lewat tombol Selesai
+// atau lewat edit manual) — dipakai untuk tahu sebuah event sudah kelar
+// atau belum, terlepas dari endType apa.
+// ---------------------------------------------------------------------------
+
+export const calendarEventEndTypeEnum = pgEnum("calendar_event_end_type", [
+  "undetermined",
+  "in_progress",
+  "determined",
+]);
+
+export const calendarEvents = pgTable(
+  "calendar_events",
+  {
+    id: serial("id").primaryKey(),
+    title: varchar("title", { length: 200 }).notNull(),
+    description: text("description"),
+    startAt: timestamp("start_at", { withTimezone: true }).notNull(),
+    endType: calendarEventEndTypeEnum("end_type").notNull().default("undetermined"),
+    plannedEndAt: timestamp("planned_end_at", { withTimezone: true }),
+    actualEndAt: timestamp("actual_end_at", { withTimezone: true }),
+    createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    startIdx: index("calendar_events_start_idx").on(t.startAt),
+  })
+);
+
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
 
