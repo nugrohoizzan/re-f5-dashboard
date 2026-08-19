@@ -107,6 +107,7 @@ export function AddTitipanDialog({
   const [open, setOpen] = React.useState(false);
   const [rows, setRows] = React.useState<Row[]>([{ ...EMPTY_ROW }]);
   const [saving, setSaving] = React.useState(false);
+  const [creatorId, setCreatorId] = React.useState<number | null>(engineers[0]?.id ?? null);
 
   function addRow() {
     setRows((r) => [...r, { ...EMPTY_ROW }]);
@@ -129,7 +130,7 @@ export function AddTitipanDialog({
       await createTitipanBatch({
         date,
         shift,
-        items: items.map((r) => ({ ...r, assignedEngineerId: engineers[0]?.id ?? null })),
+        items: items.map((r) => ({ ...r, assignedEngineerId: creatorId ?? engineers[0]?.id ?? null })),
       });
       toast.success(`${items.length} item titipan berhasil disimpan.`);
       setRows([{ ...EMPTY_ROW }]);
@@ -152,10 +153,26 @@ export function AddTitipanDialog({
           <DialogTitle>Tambah Titipan — Shift {shift}, {date}</DialogTitle>
           <DialogDescription>
             {engineers.length > 0
-              ? `Dibuat oleh ${engineers.map((e) => e.displayName).join(", ")}. Tetap terlihat oleh shift berikutnya sampai selesai.`
+              ? "Tetap terlihat oleh shift berikutnya sampai selesai."
               : "Tidak ada engineer untuk tanggal/shift ini — cek Jadwal Shift."}
           </DialogDescription>
         </DialogHeader>
+
+        {engineers.length > 0 && (
+          <div className="space-y-1.5">
+            <Label>Dibuat oleh</Label>
+            <Select
+              value={creatorId ?? ""}
+              onChange={(e) => setCreatorId(Number(e.target.value))}
+            >
+              {engineers.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.displayName}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
 
         <div className="space-y-3">
           {rows.map((row, idx) => (
