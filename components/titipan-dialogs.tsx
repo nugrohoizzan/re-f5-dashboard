@@ -36,6 +36,16 @@ const STATUS_LABEL_ID: Record<string, string> = {
   completed: "selesai",
 };
 
+// Banyak catatan titipan di-paste dari tiket/log lama yang pakai baris
+// pemisah "========" — di tampilan detail, pecah jadi beberapa paragraf
+// dan gambar sebagai garis pembatas asli (bukan teks ====).
+function splitDescription(text: string) {
+  return text
+    .split(/={3,}/g)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 const SUPPORT_ACTION_OPTIONS = ["Enable/Disable", "Ubah Ratio/Traffic"];
 
 type Row = {
@@ -398,7 +408,14 @@ export function TitipanDetailDialog({
             </DialogHeader>
 
             {task.description && (
-              <p className="whitespace-pre-wrap text-sm text-zinc-600">{task.description}</p>
+              <div className="space-y-2">
+                {splitDescription(task.description).map((part, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 && <hr className="border-zinc-200" />}
+                    <p className="whitespace-pre-wrap text-sm text-zinc-600">{part}</p>
+                  </React.Fragment>
+                ))}
+              </div>
             )}
 
             {task.dueDate && (
