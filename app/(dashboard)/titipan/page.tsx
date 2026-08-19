@@ -11,6 +11,16 @@ import { SearchBox } from "@/components/search-box";
 import { formatDateLong, todayISO, cn } from "@/lib/utils";
 import { Ticket, Tag, CalendarClock, User } from "lucide-react";
 
+// Banyak catatan titipan di-paste dari tiket/log lama yang pakai baris
+// pemisah "========" — buang itu di tampilan card biar gak berantakan,
+// data aslinya di database tetap utuh (cuma dipoles pas display).
+function cleanDescription(text: string) {
+  return text
+    .replace(/={3,}/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 const FILTERS = [
   { key: "all", label: "Semua" },
   { key: "pending", label: "Pending" },
@@ -136,7 +146,7 @@ export default async function TitipanPage({
               </div>
 
               {t.description && (
-                <p className="line-clamp-2 text-sm text-zinc-500">{t.description}</p>
+                <p className="line-clamp-2 text-sm text-zinc-500">{cleanDescription(t.description)}</p>
               )}
 
               <p className="text-xs text-zinc-400">
