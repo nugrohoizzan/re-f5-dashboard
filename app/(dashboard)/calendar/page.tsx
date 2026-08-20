@@ -14,6 +14,7 @@ import { id as localeId } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getCalendarEventsForMonth, searchCalendarEvents } from "@/actions/calendar";
 import { AddCalendarEventDialog, CalendarEventDetailDialog } from "@/components/calendar-event-dialog";
+import { CalendarMonthPicker } from "@/components/calendar-month-picker";
 import { SearchBox } from "@/components/search-box";
 import { formatDateTime, todayISO, cn } from "@/lib/utils";
 
@@ -109,9 +110,11 @@ export default async function CalendarPage({
           >
             <ChevronLeft className="h-4 w-4" />
           </Link>
-          <p className="w-40 text-center text-sm font-semibold capitalize text-zinc-900">
-            {format(anchor, "MMMM yyyy", { locale: localeId })}
-          </p>
+          <CalendarMonthPicker
+            year={anchor.getFullYear()}
+            month={anchor.getMonth() + 1}
+            label={format(anchor, "MMMM yyyy", { locale: localeId })}
+          />
           <Link
             href={`/calendar?month=${nextMonth}`}
             className="focus-ring rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100"
