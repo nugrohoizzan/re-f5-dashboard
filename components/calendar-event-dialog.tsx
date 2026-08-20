@@ -37,8 +37,6 @@ export const END_TYPE_LABEL: Record<EndTypeValue, string> = {
 
 const END_TYPE_OPTIONS: EndTypeValue[] = ["undetermined", "in_progress", "determined"];
 
-// Selalu render pasangan tanggal + jam berjejeran, dipakai untuk "Mulai"
-// maupun "Selesai" (kalau tipenya "Ada Kepastian").
 function DateTimeRow({
   dateValue,
   timeValue,
@@ -134,7 +132,7 @@ export function AddCalendarEventDialog({ defaultDate }: { defaultDate: string })
       setOpen(false);
       router.refresh();
     } catch {
-      toast.error("Gagal menyimpan activity. Silakan coba lagi.");
+      toast.error("Gagal menyimpan activity. Coba lagi.");
     } finally {
       setSaving(false);
     }
@@ -155,8 +153,7 @@ export function AddCalendarEventDialog({ defaultDate }: { defaultDate: string })
         <DialogHeader>
           <DialogTitle>Tambah Activity</DialogTitle>
           <DialogDescription>
-            Untuk rencana di luar aktivitas harian, titipan, atau troubleshoot — misalnya switch over /
-            switch back.
+            SChedule diluar daily, handover & troubleshoot.
           </DialogDescription>
         </DialogHeader>
 
@@ -204,8 +201,8 @@ export function AddCalendarEventDialog({ defaultDate }: { defaultDate: string })
           ) : (
             <p className="text-xs text-zinc-400">
               {form.endType === "in_progress"
-                ? "Activity akan tetap tercatat berjalan sampai kamu tandai Selesai."
-                : "Activity akan tetap tercatat berjalan sampai waktu selesainya diedit manual."}
+                ? "Activity bakalan tetep kecatet on progress sampai tandai Selesai."
+                : "Activity bakalan tetep kecatet on progress sampai waktu selesainya diedit manual."}
             </p>
           )}
 
@@ -396,7 +393,7 @@ export function CalendarEventDetailDialog({
             </p>
 
             {event.description && (
-              <p className="whitespace-pre-wrap break-words text-sm text-zinc-600">{event.description}</p>
+              <p className="whitespace-pre-wrap text-sm text-zinc-600">{event.description}</p>
             )}
 
             <DialogFooter className="flex-wrap justify-between sm:justify-between">
