@@ -431,6 +431,27 @@ export type CliCommand = typeof cliCommands.$inferSelect;
 export type QuickLink = typeof quickLinks.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// API Keys — dipakai sistem LUAR (bot WA, bot laporan, Google Sheets, dst)
+// buat autentikasi ke REST API read-only di /api/v1/*. Bukan pakai login
+// session biasa karena sistem luar gak bisa login interaktif.
+// Key ASLI cuma ditampilkan sekali pas dibuat (lewat script generate), yang
+// disimpan di DB cuma hash-nya — sama seperti password user.
+// ---------------------------------------------------------------------------
+
+export const apiKeys = pgTable("api_keys", {
+  id: serial("id").primaryKey(),
+  label: varchar("label", { length: 120 }).notNull(), // cth. "Bot WA - HO Report"
+  keyHash: varchar("key_hash", { length: 64 }).notNull().unique(), // sha256 hex
+  keyPrefix: varchar("key_prefix", { length: 16 }).notNull(), // buat identifikasi di log, cth "f5ops_ab12"
+  active: boolean("active").notNull().default(true),
+  createdBy: integer("created_by").references(() => users.id, { onDelete: "set null" }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Calendar — activity di luar aktivitas harian/titipan/troubleshoot, cth.
 // rencana switch over / switch back. Waktu mulai selalu pasti (timestamp),
 // tapi waktu selesai punya 3 jenis:
