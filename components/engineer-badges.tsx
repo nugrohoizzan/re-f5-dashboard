@@ -23,6 +23,7 @@ export function EngineerBadges({
           className="animate-in fade-in-0 zoom-in-95 rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-sm font-medium text-red-800 duration-200"
         >
           {e.displayName}
+          {e.note && <span className="ml-1 font-normal text-red-500">{e.note}</span>}
         </span>
       ))}
     </div>
