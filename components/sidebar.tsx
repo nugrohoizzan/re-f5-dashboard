@@ -306,10 +306,13 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Sidebar desktop */}
+      {/* Sidebar desktop — sticky ke viewport (top-0 + h-screen) supaya
+          tidak ikut ter-scroll saat konten halaman utama (mis. Calendar)
+          lebih panjang dari layar. Cukup nav di dalamnya sendiri yang
+          scroll (overflow-y-auto) kalau daftar menunya kepanjangan. */}
       <aside
         className={cn(
-          "hidden shrink-0 flex-col border-r border-zinc-800 bg-zinc-900 py-4 transition-all duration-200 ease-in-out md:flex",
+          "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-zinc-800 bg-zinc-900 py-4 transition-all duration-200 ease-in-out md:flex",
           collapsed ? "w-16" : "w-60"
         )}
       >
