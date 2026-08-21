@@ -128,7 +128,9 @@ export function ScheduleGrid({
                   onClick={() => toggleRowSelection(eng.id)}
                   className={cn(
                     "sched-sticky-col cursor-pointer select-none px-3 py-1.5 text-sm font-medium transition-colors duration-100",
-                    rowSelected ? "bg-red-600 text-white" : "text-zinc-900"
+                    rowSelected
+                      ? "!bg-red-600 !text-white"
+                      : "bg-white text-zinc-900"
                   )}
                 >
                   {eng.displayName}
