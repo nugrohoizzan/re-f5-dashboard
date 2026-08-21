@@ -1,4 +1,5 @@
 import { and, eq, gte, lte, asc } from "drizzle-orm";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 import { db } from "@/lib/db";
 import { shiftSchedule, engineers } from "@/lib/db/schema";
 import { getEngineersForShift } from "@/lib/schedule-rules";
@@ -7,19 +8,19 @@ import { todayISO } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-// Dua mode:
-// 1) GET /api/v1/schedule?date=YYYY-MM-DD
-//    -> roster resmi per shift (siapa masuk shift 1/2/3) untuk 1 tanggal.
-//    Tanpa ?date sama sekali -> pakai hari ini.
-// 2) GET /api/v1/schedule?from=YYYY-MM-DD&to=YYYY-MM-DD
-//    -> data mentah grid jadwal per engineer per tanggal (buat sinkron ke
-//    spreadsheet "manage service" dst).
 export async function GET(request: Request) {
   return withApiKey(request, async () => {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get("date");
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
+    const month = searchParams.get("month");
+    let from = searchParams.get("from");
+    let to = searchParams.get("to");
+
+    if (month) {
+      const anchor = new Date(`${month}-01T00:00:00`);
+      from = format(startOfMonth(anchor), "yyyy-MM-dd");
+      to = format(endOfMonth(anchor), "yyyy-MM-dd");
+    }
 
     if (from || to) {
       const conditions = [];
