@@ -109,7 +109,6 @@ export function ScheduleGrid({
                     weekend && "bg-zinc-800",
                     colSelected && "bg-red-600 text-white"
                   )}
-                  title="Klik untuk menyorot kolom ini"
                 >
                   <div>{format(date, "EEE")}</div>
                   <div className={cn(colSelected ? "text-red-100" : "text-zinc-300")}>
@@ -131,7 +130,6 @@ export function ScheduleGrid({
                     "sched-sticky-col cursor-pointer select-none px-3 py-1.5 text-sm font-medium transition-colors duration-100",
                     rowSelected ? "bg-red-600 text-white" : "text-zinc-900"
                   )}
-                  title="Klik untuk menyorot baris ini"
                 >
                   {eng.displayName}
                 </td>
@@ -143,20 +141,14 @@ export function ScheduleGrid({
                   const isEditing = editingKey === key;
                   const colSelected = selectedDate === d;
                   const highlighted = rowSelected || colSelected;
-                  // Sel di titik potong baris & kolom yang sama-sama dipilih
-                  // dikasih sorotan sedikit lebih tegas, biar kelihatan beda.
                   const isIntersection = rowSelected && colSelected;
 
                   return (
                     <td
                       key={d}
                       className={cn(
-                        "h-9 min-w-[64px] cursor-pointer p-0 text-center transition-shadow duration-100",
-                        isWeekend(d) && !value && "bg-zinc-50",
-                        highlighted &&
-                          (isIntersection
-                            ? "ring-2 ring-inset ring-red-600"
-                            : "ring-2 ring-inset ring-red-400")
+                        "h-9 min-w-[64px] cursor-pointer p-0 text-center",
+                        isWeekend(d) && !value && "bg-zinc-50"
                       )}
                       onClick={() => !isEditing && startEdit(eng.id, d)}
                     >
@@ -178,10 +170,17 @@ export function ScheduleGrid({
                           maxLength={20}
                         />
                       ) : (
+                        // Ring highlight ditaruh di SINI (div dalam, yang
+                        // punya background warna) — bukan di <td> luar —
+                        // supaya tidak ketutup dan benar-benar kelihatan.
                         <div
                           className={cn(
-                            "flex h-9 w-full items-center justify-center font-medium",
-                            colorClass
+                            "flex h-9 w-full items-center justify-center font-medium transition-shadow duration-100",
+                            colorClass,
+                            highlighted &&
+                              (isIntersection
+                                ? "ring-2 ring-inset ring-red-600"
+                                : "ring-2 ring-inset ring-red-400")
                           )}
                           title={
                             rule
